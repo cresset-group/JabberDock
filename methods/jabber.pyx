@@ -130,8 +130,8 @@ class Jabber(object):
         # This gives us the boolean values for each index as to whether it satifies the criteria of closness and within the cutoff
         cdef np.ndarray[dtype=np.npy_bool, ndim=1, cast=True] bool_index2 = np.logical_and(min_index2, cutoff_index2)
 
-        cdef np.ndarray[double, ndim=1] dist_cutoff1 = dist_min1[bool_index1]
-        cdef np.ndarray[double, ndim=1] dist_cutoff2 = dist_min2[bool_index2]
+        dist_cutoff1 = dist_min1[bool_index1]
+        dist_cutoff2 = dist_min2[bool_index2]
     
         return np.array((dist_cutoff1, dist_cutoff2)), np.array((bool_index1, bool_index2)), np.array((min_index1, min_index2))
     
