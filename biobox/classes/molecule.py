@@ -16,6 +16,7 @@ from copy import deepcopy
 import numpy as np
 import scipy.signal
 import pandas as pd
+import warning
 
 # Definiton of constants for later calculations
 epsilon0 = 8.8542 * 10**(-12) # m**-3 kg**-1 s**4 A**2, Permitivitty of free space
@@ -830,7 +831,8 @@ class Molecule(Structure):
             posC = self.atomselect("*", "*", "C")
 
             if len(posN) != len(posC):
-                raise Exception("mismatch in N and C count")
+                #raise Exception("mismatch in N and C count")
+                warnings.warn("mismatch in N and C count")
 
             for i in range(len(idxN)-1):
                 dist = np.sqrt(np.dot(posC[i] - posN[i+1], posC[i] - posN[i+1]))
