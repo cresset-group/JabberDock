@@ -24,6 +24,7 @@ import scipy.spatial as spaz
 import time
 from libc.math cimport sqrt
 import JabberDock as jd
+from scipy.spatial import cKDTree
 #import gpu_pairwise as gpupdist
 
 class Jabber(object):
@@ -118,27 +119,8 @@ class Jabber(object):
             raise Exception("ERROR: One of your inputs is not a Jabber input, please check and try again.")
             exit(0)
 
-        # Include GPU functionality
-        #dist1 = gpupdist.pairwise_distance(verts1, verts2)
-        dist1 = spaz.distance.cdist(points1, points2, 'euclidean')
-    
-        cdef np.ndarray[np.int64_t, ndim=1] min_index2 = jd.geometry.fast_argmin_axis_0(dist1)
-    
-        dist2 = spaz.distance.cdist(points2, points1, 'euclidean') # get verts2 nearest neighbours
-        #dist2 = gpupdist.pairwise_distance(verts2, verts1)
-        cdef np.ndarray[np.int64_t, ndim=1] min_index1 = jd.geometry.fast_argmin_axis_0(dist2)
-        dist_min1 = []
-
-        for i in range(dist1.shape[0]):
-            dist_min1.append(dist1[i, min_index1[i]])
-    
-        dist_min2 = []
-        for i in range(dist2.shape[0]):
-            dist_min2.append(dist2[i, min_index2[i]])
-
-        dist_min1 = np.array(dist_min1)
-        dist_min2 = np.array(dist_min2)
-
+        dist_min1, min_index1 = cKDTree(points2).query(points1, 1)
+        dist_min2, min_index2 = cKDTree(points1).query(points2, 1)
         cutoff_index1 = dist_min1 < cutoff # Get the distances less than the cutoff
     
         cutoff_index2 = dist_min2 < cutoff
