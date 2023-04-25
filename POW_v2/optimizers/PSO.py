@@ -329,7 +329,7 @@ class Swarm:
 
     #save the swarm state into a restart file
     def save_restart(self,restart):
-        file1=open(restart,"w")
+        file1=open(restart,"wb")
         file1.write(pickle.dumps(self.__dict__))
         file1.close()
 

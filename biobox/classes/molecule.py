@@ -16,7 +16,7 @@ from copy import deepcopy
 import numpy as np
 import scipy.signal
 import pandas as pd
-import warning
+import warnings
 
 # Definiton of constants for later calculations
 epsilon0 = 8.8542 * 10**(-12) # m**-3 kg**-1 s**4 A**2, Permitivitty of free space

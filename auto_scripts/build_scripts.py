@@ -12,7 +12,7 @@ def nvtrun(ref_temp):
     line2 = "define   = -DPOSRES"
     line3 = "; Run Parameters"
     line4 = "integrator   = md"
-    line5 = "nsteps   = 100000"
+    line5 = "nsteps   = 500000"
     line6 = "dt   =0.002"
     line7 = "; Output Control"
     line8 = "nstxout   = 1000"
