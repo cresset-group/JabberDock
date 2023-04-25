@@ -187,7 +187,10 @@ class Fitness:
             # Assess the score between two maps
             dist, bool_index, min_index = self.data.J1.distance_list(Ptest_J2, cutoff = self.params.dist_cutoff)
             # Negative because we want to minmise the score for POW
-            Sc = - self.data.J1.scoring_function(Ptest_J2, dist, bool_index, min_index)
+            try:
+                Sc = - self.data.J1.scoring_function(Ptest_J2, dist, bool_index, min_index)
+            except:
+                Sc = np.nan
 
             if np.isnan(Sc):
                 Sc = np.inf
