@@ -13,7 +13,8 @@
 
 
 import numpy as np
-from matplotlib.mlab import dist
+#from matplotlib.mlab import dist
+from numpy import hypot as dist
 cimport numpy as np
 from cpython cimport bool
 import scipy.spatial.distance as S
