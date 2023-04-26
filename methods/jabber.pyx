@@ -133,7 +133,7 @@ class Jabber(object):
         dist_cutoff1 = dist_min1[bool_index1]
         dist_cutoff2 = dist_min2[bool_index2]
     
-        return np.array((dist_cutoff1, dist_cutoff2)), np.array((bool_index1, bool_index2)), np.array((min_index1, min_index2))
+        return np.array((dist_cutoff1, dist_cutoff2), dtype=object), np.array((bool_index1, bool_index2), dtype=object), np.array((min_index1, min_index2),dtype=object)
     
     #cpdef float scoring_function(np.ndarray protein_1_iso, np.ndarray protein_2_iso, np.ndarray dist, np.ndarray bool_index, np.ndarray index, float weight = 0.5):
     def scoring_function(self, jabber2, np.ndarray dist, np.ndarray bool_index, np.ndarray index, float weight = 0.5):
