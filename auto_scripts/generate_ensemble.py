@@ -289,7 +289,7 @@ class Postprocess(PP):
                 R_pdb = jd.geometry.rotate_pdb(Ptest_pdb, pos[3], pos[4], pos[5], pos[6])
                 Ptest_pdb.translate(x = pos[0],y = pos[1],z = pos[2])
 
-                C_model = self.M1 + Ptest_pdb # now write to file as whole complex (rather than just ligand)
+                C_model = self.data.M1 + Ptest_pdb # now write to file as whole complex (rather than just ligand)
                 C_model.write_pdb("./models/model_%i.pdb"%(cnt))
 
                 # Now we do the density map
