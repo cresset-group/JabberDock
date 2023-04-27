@@ -108,7 +108,7 @@ else:
 logger.info("> Ranking complete, outputting ranked data to %s. The numbers in the last column indicate the corresponding model numbers of the complex PDB file output by dock."%(out_file))
 
 f = open(out_file, "w")
-f.write("SCORE  MODEL_NO")
+f.write("SCORE  MODEL_NO\n")
 for line in ranked_data:
     f.write("%.5f  %i\n"%(line[0], int(line[1])))
 
