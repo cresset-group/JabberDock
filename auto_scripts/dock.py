@@ -6,6 +6,7 @@ from copy import deepcopy
 import logging
 import subprocess
 import datetime
+
 now = datetime.datetime.now()
 import numpy as np
 
@@ -22,21 +23,97 @@ import JabberDock as jd
 ############################################
 
 # Create parameters based on user arguments
-parser = argparse.ArgumentParser(description='Parse input parameters')
-parser.add_argument('-ir', metavar='receptor name', required=True, help="Name of the receptor. The name should be consistant between your singular pdb structure based around your STID maps. This is the default behaviour from build_map and will only be different if you've moved files")
-parser.add_argument('-il', metavar='ligand name', required=True, help="Name of the ligand. The name should be consistant, as above")
-parser.add_argument('-iso', metavar='isovalue', required=False, default=0.43, help="Isovalue to use for surface complementartiy of STID map (default is the benchmarked 0.43)")
-parser.add_argument('-d', metavar='dist', required=False, default=1.6, help="Distances between corresponding surfaces to consider when using the surface complementarity scoring function")
-parser.add_argument('-l', metavar='logfile', required=False, default='pow_log.dat', help="Name of log file to keep POW information")
-parser.add_argument('-ns', metavar='no_samples', required=False, default=300, help="Number of docked predicted results you want to be returned")
-parser.add_argument('-b', metavar='buffer', required=False, default = 0., help="Buffer region to use when exploring the cartisian conformational space around the receptor (default is 0. ang.)")
-parser.add_argument('-m', metavar='space_multiplier', required=False, default= 1.5, help="Multiplier to searching the conformational space. So the default of 1.5 means 1.5 the size of the receptor is allowed to be explored by the ligand.")
-parser.add_argument('-a', metavar='angle', required=False, default = 180., help="Angle to twist molecule around (default / recommended unless you want to restrict the exploration space, 180 deg.)")
-parser.add_argument('-n', metavar='name', required=False, default='model_solutions', help="filename for the .dat file with the roto-translations and scores at the end (default is model_solutions)")
-parser.add_argument('-r', metavar='restart', required=False, default=0, help="If this is a restart run (i.e. you're continuing from a point in the docking simulation). The default is 0 (i.e. False). If you are continuing, set -r 1")
-parser.add_argument('-np', metavar='no_processors', required=False, default=1, help="How many processes to use if running in MPI, default is 1, i.e. serial")
-
-parser.add_argument('-v', action="store_true", help='Verbose (I want updates!)')
+parser = argparse.ArgumentParser(description="Parse input parameters")
+parser.add_argument(
+    "-ir",
+    metavar="receptor name",
+    required=True,
+    help="Name of the receptor. The name should be consistant between your singular pdb structure based around your STID maps. This is the default behaviour from build_map and will only be different if you've moved files",
+)
+parser.add_argument(
+    "-il",
+    metavar="ligand name",
+    required=True,
+    help="Name of the ligand. The name should be consistant, as above",
+)
+parser.add_argument(
+    "-iso",
+    metavar="isovalue",
+    required=False,
+    default=0.43,
+    help="Isovalue to use for surface complementartiy of STID map (default is the benchmarked 0.43)",
+)
+parser.add_argument(
+    "-d",
+    metavar="dist",
+    required=False,
+    default=1.6,
+    help="Distances between corresponding surfaces to consider when using the surface complementarity scoring function",
+)
+parser.add_argument(
+    "-l",
+    metavar="logfile",
+    required=False,
+    default="pow_log.dat",
+    help="Name of log file to keep POW information",
+)
+parser.add_argument(
+    "-ns",
+    metavar="no_samples",
+    required=False,
+    default=300,
+    help="Number of docked predicted results you want to be returned",
+)
+parser.add_argument(
+    "-b",
+    metavar="buffer",
+    required=False,
+    default=0.0,
+    help="Buffer region to use when exploring the cartisian conformational space around the receptor (default is 0. ang.)",
+)
+parser.add_argument(
+    "-m",
+    metavar="space_multiplier",
+    required=False,
+    default=1.5,
+    help="Multiplier to searching the conformational space. So the default of 1.5 means 1.5 the size of the receptor is allowed to be explored by the ligand.",
+)
+parser.add_argument(
+    "-a",
+    metavar="angle",
+    required=False,
+    default=180.0,
+    help="Angle to twist molecule around (default / recommended unless you want to restrict the exploration space, 180 deg.)",
+)
+parser.add_argument(
+    "-n",
+    metavar="name",
+    required=False,
+    default="model_solutions",
+    help="filename for the .dat file with the roto-translations and scores at the end (default is model_solutions)",
+)
+parser.add_argument(
+    "-r",
+    metavar="restart",
+    required=False,
+    default=0,
+    help="If this is a restart run (i.e. you're continuing from a point in the docking simulation). The default is 0 (i.e. False). If you are continuing, set -r 1",
+)
+parser.add_argument(
+    "-np",
+    metavar="no_processors",
+    required=False,
+    default=1,
+    help="How many processes to use if running in MPI, default is 1, i.e. serial",
+)
+parser.add_argument(
+    "--rng",
+    metavar="random_seed_file",
+    required=False,
+    default=None,
+    help="Random seed file to use for the docking simulation. Use this if you want to reproduce a docking simulation",
+)
+parser.add_argument("-v", action="store_true", help="Verbose (I want updates!)")
 args = vars(parser.parse_args())
 receptor = str(args["ir"])
 ligand = str(args["il"])
@@ -53,6 +130,11 @@ if int(args["r"]) == 1:
     restart = True
 else:
     restart = False
+
+if args["rng"] is not None:
+    rng_file = str(args["rng"])
+else:
+    rng_file = None
 
 ##################### !!!!!! #################
 # Change setting here if POW.py is located in a different place than your user home folder
@@ -90,30 +172,74 @@ for i in range(len(cmd_output_string)):
 logger.info(cmd_output)
 
 logger.info("> Setting up input script and defining boundary conditions...")
-boundary = jd.geometry.get_minmax_crd(receptor + '.pdb', fname_times = times, fname_buff = buff)
+boundary = jd.geometry.get_minmax_crd(
+    receptor + ".pdb", fname_times=times, fname_buff=buff
+)
 
 if restart:
-    _ = bs.powrun(boundary[0], boundary[1], boundary[2], receptor, ligand, iso=iso, dist = dist, log=logfile, angle=angle, no_samples=no_samples, file_name = name, restart = True)
+    _ = bs.powrun(
+        boundary[0],
+        boundary[1],
+        boundary[2],
+        receptor,
+        ligand,
+        iso=iso,
+        dist=dist,
+        log=logfile,
+        angle=angle,
+        no_samples=no_samples,
+        file_name=name,
+        restart=True,
+        rng_file=rng_file,
+    )
 else:
-    _ = bs.powrun(boundary[0], boundary[1], boundary[2], receptor, ligand, iso=iso, dist = dist, log=logfile, angle=angle, no_samples=no_samples, file_name = name)    
+    _ = bs.powrun(
+        boundary[0],
+        boundary[1],
+        boundary[2],
+        receptor,
+        ligand,
+        iso=iso,
+        dist=dist,
+        log=logfile,
+        angle=angle,
+        no_samples=no_samples,
+        file_name=name,
+        rng_file=rng_file,
+    )
 
 logger.info("> Beginning POW run")
 
 # Creating a models folder to put found solutions if none exists and this isn't a restart run
 if not restart:
-    if not os.path.isdir('models'):
-        subprocess.call('mkdir models', shell=True)
+    if not os.path.isdir("models"):
+        subprocess.call("mkdir models", shell=True)
         os.mkdir("./models/additional_files")
     else:
-        logger.info('> Found a models folder, renaming to models_old_%d%d_%d_%d_%d'%(now.hour, now.minute, now.day,now.month,now.year))
-        subprocess.call('mv models models_old_%d%d_%d_%d_%d'%(now.hour, now.minute, now.day,now.month,now.year), shell=True)
-        subprocess.call('mkdir models', shell=True)
+        logger.info(
+            "> Found a models folder, renaming to models_old_%d%d_%d_%d_%d"
+            % (now.hour, now.minute, now.day, now.month, now.year)
+        )
+        subprocess.call(
+            "mv models models_old_%d%d_%d_%d_%d"
+            % (now.hour, now.minute, now.day, now.month, now.year),
+            shell=True,
+        )
+        subprocess.call("mkdir models", shell=True)
         os.mkdir("./models/additional_files")
 
 if mpi:
-    subprocess.call("mpirun -np %i %s/POW.py input_ensemble | tee time_log.dat"%(no_proc, pow_loc), shell=True)
+    subprocess.call(
+        "mpirun -np %i %s/POW.py input_ensemble | tee time_log.dat"
+        % (no_proc, pow_loc),
+        shell=True,
+    )
 else:
-    subprocess.call("%s/POW.py input_ensemble | tee time_log.dat"%(pow_loc), shell=True)
+    subprocess.call(
+        "%s/POW.py input_ensemble | tee time_log.dat" % (pow_loc), shell=True
+    )
 
-logger.info("%i ligand models produced by POW in folder models. The data file with details on roto-translations and scores is held in %s.dat.\nThe results are returned unranked, but each model number relates to the corresponding line in the data file.\nYou can now rank the solutions into a new file using rank.py.\nNote that the solutions are geometrically oriented relative to the initial_receptor file (i.e. the starting points were moved to the origin)"%(no_samples, name))
-
+logger.info(
+    "%i ligand models produced by POW in folder models. The data file with details on roto-translations and scores is held in %s.dat.\nThe results are returned unranked, but each model number relates to the corresponding line in the data file.\nYou can now rank the solutions into a new file using rank.py.\nNote that the solutions are geometrically oriented relative to the initial_receptor file (i.e. the starting points were moved to the origin)"
+    % (no_samples, name)
+)
