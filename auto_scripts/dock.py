@@ -113,6 +113,14 @@ parser.add_argument(
     default=None,
     help="Random seed file to use for the docking simulation. Use this if you want to reproduce a docking simulation",
 )
+parser.add_argument(
+    "--constraints",
+    metavar="constraints_file",
+    required=False,
+    default=None,
+    help="Constraints file in JSON format to use for the docking simulation. Use this if you want to apply constraints to the docking simulation",
+)
+
 parser.add_argument("-v", action="store_true", help="Verbose (I want updates!)")
 args = vars(parser.parse_args())
 receptor = str(args["ir"])
@@ -135,6 +143,11 @@ if args["rng"] is not None:
     rng_file = str(args["rng"])
 else:
     rng_file = None
+
+if args["constraints"] is not None:
+    constraints_file = str(args["constraints"])
+else:
+    constraints_file = None
 
 ##################### !!!!!! #################
 # Change setting here if POW.py is located in a different place than your user home folder
@@ -191,6 +204,7 @@ if restart:
         file_name=name,
         restart=True,
         rng_file=rng_file,
+        constraints_file=constraints_file,
     )
 else:
     _ = bs.powrun(
@@ -206,6 +220,7 @@ else:
         no_samples=no_samples,
         file_name=name,
         rng_file=rng_file,
+        constraints_file=constraints_file,
     )
 
 logger.info("> Beginning POW run")

@@ -36,6 +36,7 @@ class Parser:  # this is imported in the file
         self.add("boundaryType", "boundary_type", "array str", np.array(["NA"]))
         self.add("filter_threshold", "accept", "float", 0)
         self.add("rng_file", "rng_file", "str", "None")
+        self.add("constraints_file", "constraints_file", "str", "None")
 
     # insert a new keyword entry in parameters dictionary Xx enter all the tuples above in the self.parameter xX
     def add(self, key, variable, vartype, default):

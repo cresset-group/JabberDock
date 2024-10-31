@@ -213,7 +213,7 @@ def nptrun_mem(timestep, no_steps, dump_time, ref_temp, ref_press, continuation=
     md_file.close()
     return 0
 
-def powrun(x, y, z, receptor, ligand, iso = 0.43, dist = 1.6, log='pow_log.dat',fname='input_ensemble', no_samples = 300, angle=180., mpi=False, axis=1, file_name = 'model_solutions', restart=False, ensemble_module="generate_ensemble.py", rng_file=None):
+def powrun(x, y, z, receptor, ligand, iso = 0.43, dist = 1.6, log='pow_log.dat',fname='input_ensemble', no_samples = 300, angle=180., mpi=False, axis=1, file_name = 'model_solutions', restart=False, ensemble_module="generate_ensemble.py", rng_file=None, constraints_file=None):
     
     # axis refers to limiting the rotational space of protein (needs to be added in docs)
     # ensemble module is the generate ensemble pow script that someone can edit (needs to be added in docs)
@@ -258,8 +258,9 @@ def powrun(x, y, z, receptor, ligand, iso = 0.43, dist = 1.6, log='pow_log.dat',
     else:
         line31 = ""
     line32 = f"rng_file {rng_file}"
+    line33 = f"constraints_file {constraints_file}"
 
-    lines = [line1, line2, line3, line4, line5, line6, line7, line8, line9, line10, line11, line12, line13, line14, line15, line16, line17, line18, line18_5, line19, line20, line21, line22, line23, line24, line26, line27, line28, line29, line30, line31, line32]
+    lines = [line1, line2, line3, line4, line5, line6, line7, line8, line9, line10, line11, line12, line13, line14, line15, line16, line17, line18, line18_5, line19, line20, line21, line22, line23, line24, line26, line27, line28, line29, line30, line31, line32, line33]
 
     md_file = open('%s'%(fname), 'w')
 

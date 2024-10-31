@@ -109,9 +109,78 @@ class Data:
         self.E2.write_dx('./models/additional_files/initial_%s'%(params.ligand_map))
         self.M1.write_pdb('./models/additional_files/initial_%s'%(params.receptor))
         self.M2.write_pdb('./models/additional_files/initial_%s'%(params.ligand))
-        #self.J1.write_jabber('./models/additional_files/initial_receptormap.pdb')
-        #self.J2.write_jabber('./models/additional_files/initial_ligandmap.pdb')
-        ###############################################
+
+        # if constraints are passed, check they are valid
+        if params.constraints_file != "None":
+            self.constraints = self.validate_constraints(params.constraints_file)
+        else:
+            self.constraints = None
+    
+
+    def validate_constraints(self, filepath):
+        """Load constraints from a json file and check that the constraints are valid -
+          i.e. that the atoms are present in the proteins"""
+        import json
+        with open(filepath, 'r') as file:
+            data = json.load(file)
+        
+        constraints_data = self.extract_constraints(data)
+
+        # Check that the atoms are present in the proteins
+        for constraint in constraints_data:
+            print(f"Validating constraint ID: {constraint['id']}")
+            atomM1 = constraint["atomM1"]
+            atomM2 = constraint["atomM2"]
+            # (chain, residueType, residueID, atomType)
+            # atomselect does not consider the residueType with the residueID, only one or the other
+            # print(f"Querying atoms: {atomM1} and {atomM2}")
+            # print(f"Their residue IDs are: {atomM1[2]} and {atomM2[2]}")
+            queryM1 = self.M1.atomselect(chain = atomM1[0], res = atomM1[2], atom = atomM1[3], get_index=True)
+            queryM2 = self.M2.atomselect(chain = atomM2[0], res = atomM2[2], atom = atomM2[3], get_index=True)
+
+            # if an atom is not found, query will return a list with two empty arrays
+            if len(queryM1[0]) == 0 or len(queryM2[0]) == 0:
+                # print(self.M1.data)
+                raise ValueError(f"Constraint atom not found in proteins: {atomM1} or {atomM2}.")
+            
+            # we also need to check that there is only one atom that matches the query
+            if len(queryM1[0]) > 1 or len(queryM2[0]) > 1:
+                raise ValueError(f"More than one constraint atom was found in proteins: {atomM1} or {atomM2}. Please refine the query.")
+            
+            # check that the residue type is correct, we can get 107, by doing queryM1[1][0]
+            # [array([[-9.73750341, -1.18176023,  1.81229545]]), array([107])]
+            atomM1_idx = queryM1[1][0]
+            atomM2_idx = queryM2[1][0]
+            if not self.M1.data.iloc[atomM1_idx]["resname"] == atomM1[1] or not self.M2.data.iloc[atomM1_idx]["resname"] == atomM2[1]:
+                raise ValueError(f"Residue type does not match for constraint atoms: {atomM1} or {atomM2}")
+
+            print(f"Constraint ID: {constraint['id']} validated.")
+        return constraints_data
+    
+    def extract_constraints(self, data):
+        constraints_list = []
+        for constraint in data["constraints"]:
+            cons_type = constraint["type"]
+            atoms = constraint["atoms"]
+            parameters = constraint["parameters"]
+
+            # Depending on the type, process differently
+            if cons_type == "distance":
+                cons_detail = {
+                    "id": constraint["id"],
+                    "type": cons_type,
+                    # M1 is the receptor, M2 is the ligand
+                    "atomM1": (atoms[0]["chain"], atoms[0]["residueType"], int(atoms[0]["residueID"]), atoms[0]["atomType"]),
+                    "atomM2": (atoms[1]["chain"], atoms[1]["residueType"], int(atoms[1]["residueID"]), atoms[1]["atomType"]),
+                    "dist_min": parameters["min"],
+                    "dist_max": parameters["max"],
+                }
+            else:
+                raise NotImplementedError(f"Constraint type {cons_type} not implemented yet.")
+
+            constraints_list.append(cons_detail)
+        return constraints_list
+    
 
 
 class Space(S):
@@ -175,9 +244,15 @@ class Fitness:
         #extract atoms for clash detection, and compute energy
         m2= Ptest_pdb.atomselect("*", "*", self.params.atoms)
         score_check = self.vdw_energy(self.m1, m2)
-        print("~~~~AGENT %s WORKING...~~~~"%num)
 
+        # perform constraint check, if it passes, compute the score
+        if self.data.constraints:
+            if not self.check_constraints(self.data.M1, Ptest_pdb):
+                score_check = np.inf
+
+    
         if score_check <= 0.0:
+            print(f"~~~~AGENT {num} Evaluating Sc...~~~~")
 
             # Import ligand map
             Ptest_J2 = deepcopy(self.data.J2)
@@ -218,6 +293,24 @@ class Fitness:
             energy+=4.*epsilon*((sigma/d)**9.-(sigma/d)**6.)
 
         return energy
+    
+    def check_constraints(self, m1, m2):
+        """Check if the constraints are satisfied"""
+        for constraint in self.data.constraints:
+            print(f"Checking constraint ID: {constraint['id']}")
+            if constraint["type"] == "distance":
+                atomM1 = constraint["atomM1"]
+                atomM2 = constraint["atomM2"]
+                # (chain, residueType, residueID, atomType)
+                queryM1 = m1.atomselect(chain=atomM1[0], res=atomM1[2], atom=atomM1[3])
+                queryM2 = m2.atomselect(chain=atomM2[0], res=atomM2[2], atom=atomM2[3])
+
+                distance = np.linalg.norm(queryM1 - queryM2)
+                if distance < constraint["dist_min"] or distance > constraint["dist_max"]:
+                    print(f"Constraint {constraint['id']} failed: distance {distance} not within {constraint['dist_min']} and {constraint['dist_max']}")
+                    return False
+        print("All constraints passed!")
+        return True
 
 
 class Postprocess(PP):
