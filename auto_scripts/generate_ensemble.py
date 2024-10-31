@@ -307,9 +307,9 @@ class Fitness:
 
                 distance = np.linalg.norm(queryM1 - queryM2)
                 if distance < constraint["dist_min"] or distance > constraint["dist_max"]:
-                    print(f"Constraint {constraint['id']} failed: distance {distance} not within {constraint['dist_min']} and {constraint['dist_max']}")
+                   # print(f"Constraint {constraint['id']} failed: distance {distance} not within {constraint['dist_min']} and {constraint['dist_max']}")
                     return False
-        print("All constraints passed!")
+       # print("All constraints passed!")
         return True
 
 
