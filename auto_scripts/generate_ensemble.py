@@ -297,7 +297,7 @@ class Fitness:
     def check_constraints(self, m1, m2):
         """Check if the constraints are satisfied"""
         for constraint in self.data.constraints:
-            print(f"Checking constraint ID: {constraint['id']}")
+           # print(f"Checking constraint ID: {constraint['id']}")
             if constraint["type"] == "distance":
                 atomM1 = constraint["atomM1"]
                 atomM2 = constraint["atomM2"]
