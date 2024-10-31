@@ -151,7 +151,7 @@ class Data:
             # [array([[-9.73750341, -1.18176023,  1.81229545]]), array([107])]
             atomM1_idx = queryM1[1][0]
             atomM2_idx = queryM2[1][0]
-            if not self.M1.data.iloc[atomM1_idx]["resname"] == atomM1[1] or not self.M2.data.iloc[atomM1_idx]["resname"] == atomM2[1]:
+            if not self.M1.data.iloc[atomM1_idx]["resname"] == atomM1[1] or not self.M2.data.iloc[atomM2_idx]["resname"] == atomM2[1]:
                 raise ValueError(f"Residue type does not match for constraint atoms: {atomM1} or {atomM2}")
 
             print(f"Constraint ID: {constraint['id']} validated.")
