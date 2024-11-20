@@ -495,10 +495,7 @@ class Molecule(Structure):
         a_type = []
         for i in range(0, len(self.data), 1):
             atom = self.data["name"].values[i]
-            try:
-                a_type.append(self.knowledge["atomtype"][atom])
-            except Exception as ex:
-                a_type.append("")
+            a_type.append(atom[0])
 
         self.data["atomtype"] = a_type
 
@@ -1075,7 +1072,7 @@ class Molecule(Structure):
 
         return M1_reskeep, M2_reskeep
 
-    def pdb2pqr(self, ff="", amber_convert=True):
+    def pdb2pqr(self, ff="", ligand_ff=None, amber_convert=True):
         '''
         Parses data from the pdb input into a pqr format. This uses the panda dataframe with the information
         regarding atom indexes, types etc. in the self.data files.
@@ -1083,6 +1080,7 @@ class Molecule(Structure):
         The default is the amber14sb forcefield file held within the classes/ folder.
         
         :param ff: name of forcefield text file input that needs to be read to read charges / vdw radii.
+        :param ligand_ff: name of forcefield text file input that needs to be read to read charges / vdw radii for ligands (small molecules).
         :param amber_convert: If True, will assume forcefield is amber and convert resnames as necessary
         '''
 
@@ -1187,6 +1185,14 @@ class Molecule(Structure):
             raise Exception("ERROR: %s not found!" % ff)
         
         ff = np.loadtxt(ff, usecols=(0,1,2,3,4), dtype=str)
+
+        if ligand_ff:
+            if os.path.isfile(ligand_ff) != 1:
+                raise Exception(f"ERROR: {ligand_ff} not found!")
+            ligand_ff = np.loadtxt(ligand_ff, dtype=str)
+            # print(ff,"\n")
+            # print(ligand_ff,"\n")
+            ff = np.concatenate((ff, ligand_ff), axis=0)
                         
         cols = ['resname', 'name', 'charge', 'radius', 'atomtype'] # where radius is the VdW radius in the amber file
         idx = np.arange(len(ff))
@@ -1207,6 +1213,14 @@ class Molecule(Structure):
                 print(value_loc, resnames, self.data["name"][i], self.data["resname"][i], self.data["resid"].iloc[i], self.data["index"].iloc[i])
                 raise Exception("ERROR: The atom names in your PDB file do not match the PQR file")
             else:
+                # For ligand atoms (which we assign a radius of 0 because Flare doesn't output the values in the topology)
+                # we will want to look up the radius from the knowledge base
+                if float(value_loc.iloc[0]["radius"]) == 0:
+
+                    # the reason for looking up using [value_loc.iloc[0]["atomtype"][0], is that the atomtype is a string, 
+                    # and we only want the first character (oh JD why did you implement it this way?)
+                    value_loc.iloc[0]["radius"] = self.know('atom_vdw')[value_loc.iloc[0]["atomtype"][0]]
+
                 charges.append(float(value_loc.iloc[0]["charge"]))
                 radius.append(float(value_loc.iloc[0]["radius"]))
                 atomtypes.append(value_loc.iloc[0]["atomtype"]) 

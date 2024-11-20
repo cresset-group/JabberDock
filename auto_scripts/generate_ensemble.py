@@ -113,6 +113,8 @@ class Data:
         # if constraints are passed, check they are valid
         if params.constraints_file != "None":
             self.constraints = self.validate_constraints(params.constraints_file)
+            self.proposed_boundaries = self.propose_constrained_boundaries()
+            print(f"Proposed translation search space boundaries: {self.proposed_boundaries}")
         else:
             self.constraints = None
     
@@ -174,6 +176,7 @@ class Data:
                     "atomM2": (atoms[1]["chain"], atoms[1]["residueType"], int(atoms[1]["residueID"]), atoms[1]["atomType"]),
                     "dist_min": parameters["min"],
                     "dist_max": parameters["max"],
+                    "adjust_boundaries": parameters["adjust_boundaries"]
                 }
             else:
                 raise NotImplementedError(f"Constraint type {cons_type} not implemented yet.")
@@ -181,6 +184,53 @@ class Data:
             constraints_list.append(cons_detail)
         return constraints_list
     
+    def propose_constrained_boundaries(self):
+        """Propose COM search space boundaries for the search space based on constraints"""
+        # Approach: Draw a box around the receptor atom (M1) based on the maximum constraints distance.
+        # Add the distance of the ligand atom (M2) to the COM of ligand (M2) and use that as the padding for the box.
+        constrained_cubes = []
+        for constraint in self.constraints:
+            # don't perform boundary constraint unless this is specified in the constraint JSON file
+            adjust_boundaries = constraint["adjust_boundaries"]
+            if adjust_boundaries:
+                if constraint["type"] == "distance":
+                    atomM1 = constraint["atomM1"]
+                    atomM2 = constraint["atomM2"]
+                    dist_min = constraint["dist_min"]
+                    dist_max = constraint["dist_max"]
+                    
+
+                    # Get the coordinates of the atoms, this returns an array of coordinates
+                    queryM1 = self.M1.atomselect(chain = atomM1[0], res = atomM1[2], atom = atomM1[3])
+                    queryM2 = self.M2.atomselect(chain = atomM2[0], res = atomM2[2], atom = atomM2[3])
+
+                    # Get the COM of the ligand
+                    COM = self.M2.get_center()
+
+                    # Calculate the distance between the COM and the ligand atom
+                    distance = np.linalg.norm(COM - queryM2)
+
+                    # Calculate the padding
+                    padding = distance + dist_max
+
+                    # Calculate the new boundaries
+                    low = queryM1 - padding
+                    high = queryM1 + padding
+
+                    # We need to access the first element of the low and high array, because the atomselect function returns a list of arrays
+
+                    print(f"Proposed boundaries for constraint ID {constraint['id']}: {low[0]} and {high[0]}")
+
+                    constrained_cubes.append((low[0], high[0]))
+        
+        if len(constrained_cubes) == 0:
+            return None
+        else:
+            # Now we need to find the minimum and maximum of the boundaries
+            low = np.min([cube[0] for cube in constrained_cubes], axis=0)
+            high = np.max([cube[1] for cube in constrained_cubes], axis=0)
+            return (low, high)
+
 
 
 class Space(S):
@@ -225,6 +275,14 @@ class Space(S):
         if params.boundary_type!="NA":
             for i in range(0,len(params.low_input),1):
                 self.boundary_type[i]=params.boundary_type[i]
+
+    def use_proposed_boundaries(self, proposed_boundaries):
+        """Use the proposed boundaries from the constraints"""
+        # a low boundary array looks like this: [x, y, z, rotation_deg, axis_x, axis_y, axis_z]
+        # we only want to change the translation boundaries
+        self.low[:3] = proposed_boundaries[0]
+        self.high[:3] = proposed_boundaries[1]
+        self.cell_size = self.high - self.low
 
 
 class Fitness:

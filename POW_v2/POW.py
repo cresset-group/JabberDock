@@ -141,6 +141,15 @@ if rank > -1:
 
     space = mode.Space(params, data)
 
+    if hasattr(data, "proposed_boundaries"):
+        if data.proposed_boundaries is not None:
+            old_space_low = deepcopy(space.low)
+            old_space_high = deepcopy(space.high)
+            space.use_proposed_boundaries(data.proposed_boundaries)
+            print(">> overriding translation boundaries with proposed ones")
+            print(f"Changed from {old_space_low} to {space.low}")
+            print(f"Changed from {old_space_high} to {space.high}")
+
     if rank == 0:
         print(">> " + str(len(space.low)) + "D space generated (min_pos, max_pos):")
         for i in range(0, len(space.low), 1):

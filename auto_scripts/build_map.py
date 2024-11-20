@@ -15,6 +15,7 @@ current_p = str(os.path.dirname(os.path.realpath(__file__)))
 parser = argparse.ArgumentParser(description='build map input parameters')
 parser.add_argument('-i', metavar="input", required=True, help='Input simulation multipdb (e.g. sim.pdb from gmx_run)')
 parser.add_argument('-ff_dat', metavar="forcefield", required=True, help='Forcefield charge data used to run the MD. This is a required option, but one is avaliable in biobox/classes/amber03 to correspond to the amber03 forcefield used in gmx_run.')
+parser.add_argument('-ligand_ff_dat', metavar="ligand_forcefield", default=None, required=False, help='Forcefield charge data used to run the MD. This is an optional parameter.')
 parser.add_argument('-o', metavar="outname", default='map', required=False, help='Name of prefix density / dipole file (the latter only if requested - default is your receptorname_map)')
 parser.add_argument('-ts', metavar="time_start", default=15, required=False, help='Frame from which to begin building the STID maps from (default is 15)')
 parser.add_argument('-te', metavar="time_end", default=105, required=False, help='Frame from which to stop building the STID maps from (default is 105)')
@@ -30,6 +31,7 @@ args = vars(parser.parse_args())
 
 pdb = str(args["i"])
 ff = str(args["ff_dat"])
+ligand_ff = str(args["ligand_ff_dat"])
 outname = str(args["o"])
 time_start = int(args["ts"])
 time_end = int(args["te"])
@@ -85,9 +87,9 @@ window_size = vox * width # resolution, in angstroms
 crds = M.coordinates[time_start:time_end, :]
 
 if ac == 1:
-    M_pqr = M.pdb2pqr(ff=ff)
+    M_pqr = M.pdb2pqr(ff=ff, ligand_ff=ligand_ff)
 else:
-    M_pqr = M.pdb2pqr(ff=ff, amber_convert=False)
+    M_pqr = M.pdb2pqr(ff=ff, ligand_ff=ligand_ff, amber_convert=False)
 
 M.assign_atomtype()
 mass = M.get_mass_by_atom()
