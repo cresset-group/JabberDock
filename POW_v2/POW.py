@@ -20,6 +20,7 @@
 import os, sys
 import time
 import numpy as np
+from copy import deepcopy
 
 from Default import Parser
 

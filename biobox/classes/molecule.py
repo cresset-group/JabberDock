@@ -1072,7 +1072,7 @@ class Molecule(Structure):
 
         return M1_reskeep, M2_reskeep
 
-    def pdb2pqr(self, ff="", ligand_ff=None, amber_convert=True):
+    def pdb2pqr(self, ff="", ligand_ff="", amber_convert=True):
         '''
         Parses data from the pdb input into a pqr format. This uses the panda dataframe with the information
         regarding atom indexes, types etc. in the self.data files.
@@ -1084,23 +1084,25 @@ class Molecule(Structure):
         :param amber_convert: If True, will assume forcefield is amber and convert resnames as necessary
         '''
 
-        intervals = self.guess_chain_split()[1]
+        # SFT-29023: This function is flawed in that it assumed there would always be the same
+        # number of carbons and nitrogens in the protein. This would cause the intervals to be
+        # wrong and cause residues to be combined. Instead, use the molecule data we already
+        # have to iterate over residues.
+        # intervals = self.guess_chain_split()[1]
 
         if amber_convert:
-            # patch naming of C-termini
-            for i in intervals[1:]:
-                idxs = self.same_residue(i-1, get_index=True)[1]   
+            for i in range(self.data["resid"].iloc[-1]):
+                idxs = self.data[self.data["resid"] == i + 1].index
                 names = self.data.loc[idxs, ["name"]].values
+
+                # patch naming of C-termini
                 if np.any(names == "OC1") or np.any(names == "OXT"):
                     resname = self.data.loc[idxs[0], ["resname"]].values[0]
                     newresnames = np.array(["C"+resname]*len(idxs))
                     self.data.loc[idxs, ["resname"]] = newresnames
-    
-            # patch naming of N-termini
-            for i in intervals[0:-1]:
-                idxs = self.same_residue(i, get_index=True)[1]   
-                names = self.data.loc[idxs, ["name"]].values
-                if np.any(names == "H1") and np.any(names == "H2"):
+
+                # patch naming of N-termini
+                if np.any(names == "H2") and np.any(names == "H3"):
                     resname = self.data.loc[idxs[0], ["resname"]].values[0]
                     newresnames = np.array(["N"+resname]*len(idxs))
                     self.data.loc[idxs, ["resname"]] = newresnames
@@ -1133,48 +1135,77 @@ class Molecule(Structure):
             chis_check = self.data["resname"] == 'CHIS'
             if np.sum(his_check) != 0 or np.sum(nhis_check) != 0 or np.sum(chis_check) != 0:
                 print("WARNING: found residue with name HIS, checking to see what protonation state it is in and reassigning to HIP, HIE or HID.\nYou should check HIS in your pdb file is right to be sure!")     
+                last_id = -1
                 for ix in range(len(self.data["resname"])):
-                    H_length = 17 # Set this as it is more common, and also covers the basis to capture HD1 or HE2 later if necessary (as C and O tend to be last a
-                    # N is always the first atom (use that as basis)                                                                                                                             
-                    
-                    if self.data["name"][ix] == 'N' and self.data["resname"][ix] == 'HIS':  
-                                                                                           
-                        if (self.data["name"][ix:(ix+H_length)] == 'HE2').any() and (self.data["name"][ix:(ix+H_length)] == 'HD1').any(): # If the residue contains HE2 and HD1, it is a HIP residue
-                            H_length = 18     #   number of atoms in histdine (HIP)
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = HIP
-    
-                        elif (self.data["name"][ix:(ix+H_length)] == 'HE2').any():
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = HIE
-    
-                        elif (self.data["name"][ix:(ix+H_length)] == 'HD1').any():
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = HID
-    
-                    elif self.data["name"][ix] == 'N' and self.data["resname"][ix] == 'NHIS':
-                        H_length = 19
-    
-                        if (self.data["name"][ix:(ix+H_length)] == 'HE2').any() and (self.data["name"][ix:(ix+H_length)] == 'HD1').any(): # If the residue contains HE2 and HD1, it is a HIP residue
-                            H_length = 20     #   number of atoms in histdine (HIP)
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = NHIP
-    
-                        elif (self.data["name"][ix:(ix+H_length)] == 'HE2').any():
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = NHIE
-    
-                        elif (self.data["name"][ix:(ix+H_length)] == 'HD1').any():
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = NHID
-    
-                    elif self.data["name"][ix] == 'N' and self.data["resname"][ix] == 'CHIS':
-                        H_length = 19
-    
-                        if (self.data["name"][ix:(ix+H_length)] == 'HE2').any() and (self.data["name"][ix:(ix+H_length)] == 'HD1').any(): # If the residue contains HE2 and HD1, it is a HIP residue
-                            H_length = 20     #   number of atoms in histdine (HIP)
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = CHIP
-    
-                        elif (self.data["name"][ix:(ix+H_length)] == 'HE2').any():
+                    H_length = 17  # Set this as it is more common, and also covers the basis to capture HD1 or HE2 later if necessary (as C and O tend to be last a
+                    # N is always the first atom (use that as basis)
+
+                    # SFT-29233: We have had cases where N is NOT the first atom, so instead check for when the resname changes
+                    if self.data["resid"][ix] == last_id:
+                        continue
+                    last_id = self.data["resid"][ix]
+
+                    if self.data["resname"][ix] == "HIS":
+                        # SFT-27966: If HD1 was the last atom in the residue, HIP residues would be assigned as HIE
+                        if (
+                            ix + H_length < len(self.data["resid"])
+                            and self.data["resid"][ix + H_length] == last_id
+                        ):
                             H_length = 18
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = CHIE
-    
-                        elif (self.data["name"][ix:(ix+H_length)] == 'HD1').any():
-                            self.data.loc[ix:(ix+H_length-1), "resname"] = CHID
+
+                        if (self.data["name"][ix : (ix + H_length)] == "HE2").any() and (
+                            self.data["name"][ix : (ix + H_length)] == "HD1"
+                        ).any():  # If the residue contains HE2 and HD1, it is a HIP residue
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HIP
+
+                        elif (self.data["name"][ix : (ix + H_length)] == "HE2").any():
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HIE
+
+                        elif (self.data["name"][ix : (ix + H_length)] == "HD1").any():
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HID
+
+                    elif self.data["resname"][ix] == "NHIS":
+                        H_length = 19
+
+                        # SFT-27966: If HD1 was the last atom in the residue, HIP residues would be assigned as HIE
+                        if (
+                            ix + H_length < len(self.data["resid"])
+                            and self.data["resid"][ix + H_length] == last_id
+                        ):
+                            H_length = 20
+
+                        if (self.data["name"][ix : (ix + H_length)] == "HE2").any() and (
+                            self.data["name"][ix : (ix + H_length)] == "HD1"
+                        ).any():  # If the residue contains HE2 and HD1, it is a HIP residue
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHIP
+
+                        elif (self.data["name"][ix : (ix + H_length)] == "HE2").any():
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHIE
+
+                        elif (self.data["name"][ix : (ix + H_length)] == "HD1").any():
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHID
+
+                    elif self.data["resname"][ix] == "CHIS":
+                        H_length = 19
+
+                        # SFT-27966: If HD1 was the last atom in the residue, HIP residues would be assigned as HIE
+                        if (
+                            ix + H_length < len(self.data["resid"])
+                            and self.data["resid"][ix + H_length] == last_id
+                        ):
+                            H_length = 20
+
+                        if (self.data["name"][ix : (ix + H_length)] == "HE2").any() and (
+                            self.data["name"][ix : (ix + H_length)] == "HD1"
+                        ).any():  # If the residue contains HE2 and HD1, it is a HIP residue
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHIP
+
+                        elif (self.data["name"][ix : (ix + H_length)] == "HE2").any():
+                            H_length = 18
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHIE
+
+                        elif (self.data["name"][ix : (ix + H_length)] == "HD1").any():
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHID
 
         if len(ff) == 0:
             #"amber14sb.dat"
@@ -1186,7 +1217,7 @@ class Molecule(Structure):
         
         ff = np.loadtxt(ff, usecols=(0,1,2,3,4), dtype=str)
 
-        if ligand_ff:
+        if len(ligand_ff) > 0:
             if os.path.isfile(ligand_ff) != 1:
                 raise Exception(f"ERROR: {ligand_ff} not found!")
             ligand_ff = np.loadtxt(ligand_ff, dtype=str)
@@ -1210,8 +1241,20 @@ class Molecule(Structure):
             value_loc = pqr_data[values]
       
             if len(value_loc) == 0:
-                print(value_loc, resnames, self.data["name"][i], self.data["resname"][i], self.data["resid"].iloc[i], self.data["index"].iloc[i])
-                raise Exception("ERROR: The atom names in your PDB file do not match the PQR file")
+                print(
+                    value_loc,
+                    resnames,
+                    self.data["name"][i],
+                    self.data["resname"][i],
+                    self.data["resid"].iloc[i],
+                    self.data["index"].iloc[i],
+                )
+                # SFT-28522: Don't kill calculation if unknown atom tpye is seen - can use ghost atoms at this stage.
+                warnings.warn("ERROR: The atom names in your PDB file do not match the PQR file")
+                charges.append(0.0)
+                radius.append(0.0)
+                atomtypes.append("UNK")
+                # raise Exception("ERROR: The atom names in your PDB file do not match the PQR file")
             else:
                 # For ligand atoms (which we assign a radius of 0 because Flare doesn't output the values in the topology)
                 # we will want to look up the radius from the knowledge base

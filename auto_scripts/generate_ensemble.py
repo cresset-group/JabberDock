@@ -319,6 +319,17 @@ class Fitness:
 
             # Assess the score between two maps
             dist, bool_index, min_index = self.data.J1.distance_list(Ptest_J2, cutoff = self.params.dist_cutoff)
+
+            # SFT-27971 - Fix JabberDock docking protein chain to itself
+            bool_index_cp = deepcopy(bool_index)
+            min_index_cp = deepcopy(min_index)
+            try:
+                bool_index = np.asarray(bool_index, dtype=bool)
+                min_index = np.asarray(min_index, dtype=bool)
+            except:
+                bool_index = bool_index_cp
+                min_index = min_index_cp
+
             # Negative because we want to minmise the score for POW
             try:
                 Sc = - self.data.J1.scoring_function(Ptest_J2, dist, bool_index, min_index)

@@ -73,8 +73,12 @@ class Parser:  # this is imported in the file
 
                 # if type is string
                 if val[1].split()[0] == "str":  # _> val[1] = 'str' or 'int'
+                    # SFT-28200 - Stitch module path back together when it contains spaces
+                    str_val = w[1]
+                    if val[0] == "module":
+                        str_val = " ".join(w[1:])
                     exec(
-                        'self.%s=%s("%s")' % (val[0], val[1], w[1])
+                        'self.%s=%s(r"%s")' % (val[0], val[1], str_val)
                     )  # Xx here you are replacing the default by input paramater
                     # Xx exec -> self.restart_load = str("NA") xX the "NA" is from the input file
                 # if type is int or float

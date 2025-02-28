@@ -15,7 +15,7 @@ current_p = str(os.path.dirname(os.path.realpath(__file__)))
 parser = argparse.ArgumentParser(description='build map input parameters')
 parser.add_argument('-i', metavar="input", required=True, help='Input simulation multipdb (e.g. sim.pdb from gmx_run)')
 parser.add_argument('-ff_dat', metavar="forcefield", required=True, help='Forcefield charge data used to run the MD. This is a required option, but one is avaliable in biobox/classes/amber03 to correspond to the amber03 forcefield used in gmx_run.')
-parser.add_argument('-ligand_ff_dat', metavar="ligand_forcefield", default=None, required=False, help='Forcefield charge data used to run the MD. This is an optional parameter.')
+parser.add_argument('-ligand_ff_dat', metavar="ligand_forcefield", default="", required=False, help='Forcefield charge data used to run the MD. This is an optional parameter.')
 parser.add_argument('-o', metavar="outname", default='map', required=False, help='Name of prefix density / dipole file (the latter only if requested - default is your receptorname_map)')
 parser.add_argument('-ts', metavar="time_start", default=15, required=False, help='Frame from which to begin building the STID maps from (default is 15)')
 parser.add_argument('-te', metavar="time_end", default=105, required=False, help='Frame from which to stop building the STID maps from (default is 105)')
@@ -118,7 +118,7 @@ y_range = np.arange(buffmaxmin[2], buffmaxmin[3]+width-window_size, width)
 z_range = np.arange(buffmaxmin[4], buffmaxmin[5]+width-window_size, width)
 
 spec_vol = window_size**3 * 10**(-27) # -27 for docking # Convert nm^3 to metres^3
-orig = np.array([x_range, y_range, z_range]) + window_size / 2.
+orig = np.array([x_range, y_range, z_range], dtype=object) + window_size / 2.0
 a = np.array((len(x_range), len(y_range), len(z_range)))
 min_crds = np.ndarray.tolist(np.asarray((buffmaxmin[0] + buff[0], buffmaxmin[2] + buff[1], buffmaxmin[4] + buff[2])) + window_size / 2)
 
