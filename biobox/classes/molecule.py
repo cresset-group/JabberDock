@@ -1156,13 +1156,13 @@ class Molecule(Structure):
                         if (self.data["name"][ix : (ix + H_length)] == "HE2").any() and (
                             self.data["name"][ix : (ix + H_length)] == "HD1"
                         ).any():  # If the residue contains HE2 and HD1, it is a HIP residue
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HIP
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HIP[0:H_length]
 
                         elif (self.data["name"][ix : (ix + H_length)] == "HE2").any():
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HIE
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HIE[0:H_length]
 
                         elif (self.data["name"][ix : (ix + H_length)] == "HD1").any():
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HID
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = HID[0:H_length]
 
                     elif self.data["resname"][ix] == "NHIS":
                         H_length = 19
@@ -1177,13 +1177,13 @@ class Molecule(Structure):
                         if (self.data["name"][ix : (ix + H_length)] == "HE2").any() and (
                             self.data["name"][ix : (ix + H_length)] == "HD1"
                         ).any():  # If the residue contains HE2 and HD1, it is a HIP residue
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHIP
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHIP[0:H_length]
 
                         elif (self.data["name"][ix : (ix + H_length)] == "HE2").any():
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHIE
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHIE[0:H_length]
 
                         elif (self.data["name"][ix : (ix + H_length)] == "HD1").any():
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHID
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = NHID[0:H_length]
 
                     elif self.data["resname"][ix] == "CHIS":
                         H_length = 19
@@ -1198,14 +1198,14 @@ class Molecule(Structure):
                         if (self.data["name"][ix : (ix + H_length)] == "HE2").any() and (
                             self.data["name"][ix : (ix + H_length)] == "HD1"
                         ).any():  # If the residue contains HE2 and HD1, it is a HIP residue
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHIP
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHIP[0:H_length]
 
                         elif (self.data["name"][ix : (ix + H_length)] == "HE2").any():
                             H_length = 18
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHIE
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHIE[0:H_length]
 
                         elif (self.data["name"][ix : (ix + H_length)] == "HD1").any():
-                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHID
+                            self.data.loc[ix : (ix + H_length - 1), "resname"] = CHID[0:H_length]
 
         if len(ff) == 0:
             #"amber14sb.dat"
